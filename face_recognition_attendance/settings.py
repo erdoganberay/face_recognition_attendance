@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-&xvi7q^@c8s38#elrf&rennp7iicp&&@=j17r!3jiy(=_i-cc_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Application definition
@@ -121,3 +121,6 @@ LOGOUT_REDIRECT_URL = "home"
 
 # Password reset backend configuration
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+#Default type of primary key
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

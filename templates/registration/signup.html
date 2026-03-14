@@ -4,11 +4,108 @@
 {% block title %}Sign Up{% endblock %}
 
 {% block content %}
-<h2>Sign up</h2>
-<form method="post">
+<h2>Student Sign Up</h2>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+{% if form.non_field_errors %}
+  {% for error in form.non_field_errors %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endfor %}
+{% endif %}
+
+<form method="post" id="signupForm">
   {% csrf_token %}
-  {{ form }}
-  <button type="submit">Sign Up</button>
+
+  <!-- Standard form fields -->
+  {{ form.as_p }}
+
+  <!-- Face Capture Section -->
+  <div class="face-capture">
+    <p><strong>Face Photo</strong> — required for attendance</p>
+
+    <!-- Webcam preview -->
+    <video id="video" width="320" height="240" autoplay playsinline muted style="display:none; border: 2px solid #ccc;"></video>
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+
+    <!-- Captured photo preview -->
+    <div id="preview" style="display:none;">
+      <img id="capturedPhoto" width="320" height="240" style="border: 2px solid green;" />
+      <p style="color: green;">✓ Face captured successfully</p>
+    </div>
+
+    <!-- Buttons -->
+    <div>
+      <button type="button" id="startBtn" onclick="startCamera()">Open Camera</button>
+      <button type="button" id="captureBtn" onclick="capturePhoto()" style="display:none;">Capture Photo</button>
+      <button type="button" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
+    </div>
+
+    <p id="cameraError" style="color:red; display:none;"></p>
+  </div>
+
+  <!-- Hidden field — stores the base64 image to send with the form -->
+  <input type="hidden" name="face_encoding_data" id="face_encoding_data" />
+
+  <button type="submit" id="submitBtn" disabled>Sign Up</button>
   <p><a href="{% url 'home' %}">Cancel</a></p>
 </form>
+
+<script>
+  let stream = null;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('captureBtn').style.display = 'inline';
+      document.getElementById('cameraError').style.display = 'none';
+    } catch (e) {
+      document.getElementById('cameraError').textContent = 'Could not access camera: ' + e.message;
+      document.getElementById('cameraError').style.display = 'block';
+    }
+  }
+
+  function capturePhoto() {
+    // Draw current video frame to canvas
+    ctx.drawImage(video, 0, 0, 320, 240);
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+    // Show preview
+    document.getElementById('capturedPhoto').src = imageData;
+    document.getElementById('preview').style.display = 'block';
+    video.style.display = 'none';
+
+    // Store in hidden field
+    document.getElementById('face_encoding_data').value = imageData;
+
+    // Update buttons
+    document.getElementById('captureBtn').style.display = 'none';
+    document.getElementById('retakeBtn').style.display = 'inline';
+
+    // Enable submit
+    document.getElementById('submitBtn').disabled = false;
+
+    // Stop camera stream
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  }
+
+  function retakePhoto() {
+    // Reset everything
+    document.getElementById('preview').style.display = 'none';
+    document.getElementById('face_encoding_data').value = '';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('retakeBtn').style.display = 'none';
+    document.getElementById('startBtn').style.display = 'inline';
+  }
+</script>
 {% endblock %}
