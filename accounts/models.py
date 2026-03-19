@@ -10,10 +10,11 @@ class Student(models.Model):
     student_id = models.CharField(max_length=20, unique=True)
     date_of_birth = models.DateField()
     face_encoding = models.TextField(blank=True, null=True)
- 
+    
+    #Encoding Serialization
     def set_encoding(self, encoding_array):
         self.face_encoding = json.dumps(encoding_array.tolist())
- 
+    #Encodin Deserialization
     def get_encoding(self):
         return np.array(json.loads(self.face_encoding))
  

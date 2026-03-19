@@ -49,7 +49,7 @@
   </div>
 
   <!-- Hidden field — stores the base64 image to send with the form -->
-  <input type="hidden" name="face_encoding_data" id="face_encoding_data" />
+  <input type="hidden" name="face_base64_data" id="face_base64_data" />
 
   <button type="submit" id="submitBtn" disabled>Sign Up</button>
   <p><a href="{% url 'home' %}">Cancel</a></p>
@@ -86,7 +86,7 @@
     video.style.display = 'none';
 
     // Store in hidden field
-    document.getElementById('face_encoding_data').value = imageData;
+    document.getElementById('face_base64_data').value = imageData;
 
     // Update buttons
     document.getElementById('captureBtn').style.display = 'none';
@@ -102,7 +102,7 @@
   function retakePhoto() {
     // Reset everything
     document.getElementById('preview').style.display = 'none';
-    document.getElementById('face_encoding_data').value = '';
+    document.getElementById('face_base64_data').value = '';
     document.getElementById('submitBtn').disabled = true;
     document.getElementById('retakeBtn').style.display = 'none';
     document.getElementById('startBtn').style.display = 'inline';
