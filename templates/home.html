@@ -1,20 +1,64 @@
 <!-- templates/home.html -->
 {% extends "base.html" %}
-
 {% block title %}Home{% endblock %}
-
 {% block content %}
-{% if user.is_authenticated %}
-<p>Hi {{ user.username }}!</p>
-<p><a href="{% url 'password_change' %}">Password Change</a></p>
-<form action="{% url 'logout' %}" method="post">
-  {% csrf_token %}
-  <button type="submit">Log Out</button>
-</form>
+
+{% if role == 'teacher' %}
+  <h2>Welcome, {{ user.get_full_name }}</h2>
+  <h3>Your Courses</h3>
+  {% for course in courses %}
+  <div>
+    <h4>{{ course.code }} - {{ course.name }}</h4>
+    <p>Room: {{ course.room }}</p>
+    <p>Schedule: {{ course.schedule }}</p>
+    <form method="post" action="{% url 'start_session' course.id %}">
+      {% csrf_token %}
+      <button type="submit">Start Session</button>
+    </form>
+  </div>
+  {% empty %}
+    <p>No courses assigned yet.</p>
+  {% endfor %}
+  <p><a href="{% url 'password_change' %}">Change Password</a></p>
+  <form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit">Log Out</button>
+  </form>
+
+{% elif role == 'student' %}
+  <h2>Welcome, {{ user.get_full_name }}</h2>
+  {% for item in course_data %}
+    <div>
+      <h3>{{ item.course.code }} - {{ item.course.name }}</h3>
+      <p>Room: {{ item.course.room }} | Schedule: {{ item.course.schedule }}</p>
+      {% for s in item.sessions %}
+        <p>
+          {{ s.session.started_at }} —
+          {% if s.attended %}
+            ✓ Attended
+          {% else %}
+            ✗ Missed
+          {% endif %}
+        </p>
+      {% empty %}
+        <p>No sessions yet.</p>
+      {% endfor %}
+    </div>
+  {% empty %} 
+    <p>You are not enrolled in any courses yet.</p>
+  {% endfor %}
+  <p><a href="{% url 'password_change' %}">Change Password</a></p>
+  <form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit">Log Out</button>
+  </form>
+
 {% else %}
-<p>You are not logged in</p>
-<p><a href="{% url 'password_reset' %}">Password Reset</a></p>
-<p><a href="{% url 'login' %}">Log In</a></p>
-<p><a href="{% url 'signup' %}">Sign Up</a></p>
+  <p>Hi {{ user.username }}</p>
+  <form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit">Log Out</button>
+  </form>
 {% endif %}
+
 {% endblock %}

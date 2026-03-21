@@ -1,0 +1,59 @@
+<!-- templates/attendance.html -->
+{% extends "base.html" %}
+{% block title %}Attendance - {{ session.course.code }}{% endblock %}
+{% block content %}
+
+<h2>{{ session.course.code }} - {{ session.course.name }}</h2>
+<p>Session started: {{ session.started_at }}</p>
+
+<div>
+  <video id="video" width="480" height="360" autoplay playsinline muted></video>
+  <canvas id="canvas" width="480" height="360" style="display:none;"></canvas>
+</div>
+
+<div id="result-box">
+  Waiting for face...
+</div>
+
+<form method="post" action="{% url 'end_session' session.id %}">
+  {% csrf_token %}
+  <button type="submit">End Session</button>
+</form>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const resultBox = document.getElementById('result-box');
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => { video.srcObject = stream; })
+    .catch(err => { resultBox.textContent = 'Camera error: ' + err.message; });
+
+  setInterval(() => {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/jpeg');
+
+    fetch("/accounts/recognize/", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageData, session_id: {{ session.id }} })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'recognized') {
+        resultBox.style.color = 'green';
+        resultBox.textContent = '✓ ' + data.name + ' (' + data.student_id + ')';
+      } else if (data.status === 'no_face') {
+        resultBox.style.color = 'gray';
+        resultBox.textContent = 'No face detected';
+      } else if (data.status === 'unknown') {
+        resultBox.style.color = 'red';
+        resultBox.textContent = 'Face not recognized';
+      }
+    })
+    .catch(err => console.error(err));
+  }, 3000);
+</script>
+
+{% endblock %}
