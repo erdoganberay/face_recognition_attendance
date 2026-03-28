@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Manage Students — {{ course.code }}{% endblock %}
+{% block content %}
+
+<h2>{{ course.code }} - {{ course.name }}</h2>
+<p><a href="{% url 'home' %}">Back to Home</a></p>
+
+{% if messages %}
+  {% for message in messages %}
+    <p>[{{ message.tags }}] {{ message }}</p>
+  {% endfor %}
+{% endif %}
+
+<h3>Enrolled Students ({{ enrolled.count }})</h3>
+{% if enrolled %}
+  <table>
+    <tr>
+      <th>Student ID</th>
+      <th>Name</th>
+      <th>Action</th>
+    </tr>
+    {% for student in enrolled %}
+    <tr>
+      <td>{{ student.student_id }}</td>
+      <td>{{ student.user.get_full_name }}</td>
+      <td>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="student_id" value="{{ student.student_id }}">
+          <button type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>No students enrolled yet.</p>
+{% endif %}
+
+<h3>Available Students ({{ available.count }})</h3>
+<input type="text" id="search" placeholder="Search by name or student ID...">
+{% if available %}
+  <table id="available-table">
+    <tr>
+      <th>Student ID</th>
+      <th>Name</th>
+      <th>Action</th>
+    </tr>
+    {% for student in available %}
+    <tr>
+      <td>{{ student.student_id }}</td>
+      <td>{{ student.user.get_full_name }}</td>
+      <td>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <input type="hidden" name="student_id" value="{{ student.student_id }}">
+          <button type="submit">Add</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>No more students to add.</p>
+{% endif %}
+
+<script>
+  document.getElementById('search').addEventListener('keyup', function () {
+    var term = this.value.toLowerCase();
+    var rows = document.querySelectorAll('#available-table tr:not(:first-child)');
+    rows.forEach(function (row) {
+      var text = row.textContent.toLowerCase();
+      row.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+</script>
+
+{% endblock %}

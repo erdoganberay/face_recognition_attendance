@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Session Report — {{ session.course.code }}{% endblock %}
+{% block content %}
+
+<h2>Session Report: {{ session.course.code }} - {{ session.course.name }}</h2>
+<p>Started: {{ session.started_at }}</p>
+<p>Ended: {% if session.ended_at %}{{ session.ended_at }}{% else %}Still active{% endif %}</p>
+<p><a href="{% url 'home' %}">Back to Home</a></p>
+
+<h3>Attended ({{ attended.count }})</h3>
+{% if attended %}
+  <table>
+    <tr><th>Student ID</th><th>Name</th></tr>
+    {% for student in attended %}
+    <tr>
+      <td>{{ student.student_id }}</td>
+      <td>{{ student.user.get_full_name }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>No attendance recorded.</p>
+{% endif %}
+
+<h3>Absent ({{ absent.count }})</h3>
+{% if absent %}
+  <table>
+    <tr><th>Student ID</th><th>Name</th></tr>
+    {% for student in absent %}
+    <tr>
+      <td>{{ student.student_id }}</td>
+      <td>{{ student.user.get_full_name }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>All enrolled students attended.</p>
+{% endif %}
+
+{% endblock %}

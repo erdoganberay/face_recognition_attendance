@@ -101,7 +101,7 @@ class HomeView(View):
 
     def get(self, request):
         if hasattr(request.user, 'teacher_profile'):
-            courses = request.user.teacher_profile.courses.all()
+            courses = request.user.teacher_profile.courses.prefetch_related('sessions').all()
             return render(request, self.template_name, {'role': 'teacher', 'courses': courses})
         elif hasattr(request.user, 'student_profile'):
             student = request.user.student_profile
@@ -116,9 +116,15 @@ class HomeView(View):
                         'session': session,
                         'attended': attended,
                     })
+                total = len(session_data)
+                attended_count = sum(1 for s in session_data if s['attended'])
+                percentage = round((attended_count / total) * 100) if total > 0 else None
                 course_data.append({
                     'course': course,
                     'sessions': session_data,
+                    'total': total,
+                    'attended_count': attended_count,
+                    'percentage': percentage,
                 })
             return render(request, self.template_name, {'role': 'student', 'courses': courses, 'course_data': course_data})
         else:
@@ -154,6 +160,90 @@ class EndSessionView(View):
         session.ended_at = timezone.now()
         session.save()
         return redirect('home')
+
+
+@method_decorator(login_required, name='dispatch')
+class SessionReportView(View):
+    template_name = 'session_report.html'
+
+    def get(self, request, session_id):
+        try:
+            session = ClassSession.objects.get(id=session_id, course__teacher=request.user.teacher_profile)
+        except (ClassSession.DoesNotExist, Teacher.DoesNotExist):
+            messages.error(request, 'Session not found or access denied.')
+            return redirect('home')
+
+        attended_students = Student.objects.filter(attendance__session=session)
+        absent_students = session.course.students.exclude(pk__in=attended_students)
+
+        return render(request, self.template_name, {
+            'session': session,
+            'attended': attended_students,
+            'absent': absent_students,
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class StudentProfileView(View):
+    template_name = 'student_profile.html'
+
+    def get(self, request):
+        try:
+            student = request.user.student_profile
+        except Student.DoesNotExist:
+            return redirect('home')
+        return render(request, self.template_name, {'student': student})
+
+
+@method_decorator(login_required, name='dispatch')
+class ManageCourseStudentsView(View):
+    template_name = 'course_students.html'
+
+    def get_course_for_teacher(self, request, course_id):
+        """Return the course only if the logged-in user is its teacher."""
+        try:
+            return Course.objects.get(id=course_id, teacher=request.user.teacher_profile)
+        except (Course.DoesNotExist, Teacher.DoesNotExist):
+            return None
+
+    def get(self, request, course_id):
+        course = self.get_course_for_teacher(request, course_id)
+        if course is None:
+            messages.error(request, 'Course not found or access denied.')
+            return redirect('home')
+        enrolled = course.students.all().order_by('student_id')
+        available = Student.objects.exclude(pk__in=course.students.all()).order_by('student_id')
+        return render(request, self.template_name, {'course': course, 'enrolled': enrolled, 'available': available})
+
+    def post(self, request, course_id):
+        course = self.get_course_for_teacher(request, course_id)
+        if course is None:
+            messages.error(request, 'Course not found or access denied.')
+            return redirect('home')
+
+        action = request.POST.get('action')
+        student_id = request.POST.get('student_id', '').strip()
+
+        if action == 'add':
+            try:
+                student = Student.objects.get(student_id=student_id)
+                if course.students.filter(pk=student.pk).exists():
+                    messages.warning(request, f'{student.user.get_full_name()} is already enrolled.')
+                else:
+                    course.students.add(student)
+                    messages.success(request, f'{student.user.get_full_name()} added to {course.code}.')
+            except Student.DoesNotExist:
+                messages.error(request, f'No student found with ID "{student_id}".')
+
+        elif action == 'remove':
+            try:
+                student = Student.objects.get(student_id=student_id)
+                course.students.remove(student)
+                messages.success(request, f'{student.user.get_full_name()} removed from {course.code}.')
+            except Student.DoesNotExist:
+                messages.error(request, f'No student found with ID "{student_id}".')
+
+        return redirect('manage_course_students', course_id=course.id)
 
 
 @csrf_exempt

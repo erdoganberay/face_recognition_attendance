@@ -15,6 +15,17 @@
       {% csrf_token %}
       <button type="submit">Start Session</button>
     </form>
+    <p><a href="{% url 'manage_course_students' course.id %}">Manage Students</a></p>
+    {% with past_sessions=course.sessions.all %}
+      {% if past_sessions %}
+        <p>Past Sessions:</p>
+        <ul>
+          {% for session in past_sessions %}
+            <li>{{ session.started_at }} — <a href="{% url 'session_report' session.id %}">View Report</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
   </div>
   {% empty %}
     <p>No courses assigned yet.</p>
@@ -31,6 +42,11 @@
     <div>
       <h3>{{ item.course.code }} - {{ item.course.name }}</h3>
       <p>Room: {{ item.course.room }} | Schedule: {{ item.course.schedule }}</p>
+      {% if item.percentage is not None %}
+        <p>Attendance: {{ item.attended_count }}/{{ item.total }} sessions ({{ item.percentage }}%)</p>
+      {% else %}
+        <p>Attendance: No sessions yet</p>
+      {% endif %}
       {% for s in item.sessions %}
         <p>
           {{ s.session.started_at }} —
@@ -47,6 +63,7 @@
   {% empty %} 
     <p>You are not enrolled in any courses yet.</p>
   {% endfor %}
+  <p><a href="{% url 'student_profile' %}">My Profile</a></p>
   <p><a href="{% url 'password_change' %}">Change Password</a></p>
   <form action="{% url 'logout' %}" method="post">
     {% csrf_token %}
