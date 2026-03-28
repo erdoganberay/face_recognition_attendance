@@ -1,24 +1,26 @@
-<!-- templates/attendance.html -->
 {% extends "base.html" %}
 {% block title %}Attendance - {{ session.course.code }}{% endblock %}
 {% block content %}
 
-<h2>{{ session.course.code }} - {{ session.course.name }}</h2>
-<p>Session started: {{ session.started_at }}</p>
-
-<div>
-  <video id="video" width="480" height="360" autoplay playsinline muted></video>
-  <canvas id="canvas" width="480" height="360" style="display:none;"></canvas>
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <div class="card">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-camera-video me-2"></i>{{ session.course.code }} — {{ session.course.name }}</h5>
+        <small class="text-white-50">Started: {{ session.started_at|date:"M d, Y H:i" }}</small>
+      </div>
+      <div class="card-body text-center">
+        <video id="video" width="480" height="360" autoplay playsinline muted class="rounded mb-3" style="max-width:100%;"></video>
+        <canvas id="canvas" width="480" height="360" style="display:none;"></canvas>
+        <div id="result-box" class="alert alert-secondary fs-5 fw-semibold">Waiting for face...</div>
+        <form method="post" action="{% url 'end_session' session.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">End Session</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
-
-<div id="result-box">
-  Waiting for face...
-</div>
-
-<form method="post" action="{% url 'end_session' session.id %}">
-  {% csrf_token %}
-  <button type="submit">End Session</button>
-</form>
 
 <script>
   const video = document.getElementById('video');
@@ -28,7 +30,7 @@
 
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => { video.srcObject = stream; })
-    .catch(err => { resultBox.textContent = 'Camera error: ' + err.message; });
+    .catch(err => { resultBox.className = 'alert alert-danger'; resultBox.textContent = 'Camera error: ' + err.message; });
 
   setInterval(() => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -42,13 +44,13 @@
     .then(res => res.json())
     .then(data => {
       if (data.status === 'recognized') {
-        resultBox.style.color = 'green';
-        resultBox.textContent = '✓ ' + data.name + ' (' + data.student_id + ')';
+        resultBox.className = 'alert alert-success';
+        resultBox.textContent = '✓ ' + data.name + ' (' + data.student_id + ')' + (data.already_marked ? ' — already marked' : '');
       } else if (data.status === 'no_face') {
-        resultBox.style.color = 'gray';
+        resultBox.className = 'alert alert-secondary';
         resultBox.textContent = 'No face detected';
       } else if (data.status === 'unknown') {
-        resultBox.style.color = 'red';
+        resultBox.className = 'alert alert-warning';
         resultBox.textContent = 'Face not recognized';
       }
     })

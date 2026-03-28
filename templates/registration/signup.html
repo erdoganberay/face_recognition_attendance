@@ -1,59 +1,56 @@
 <!-- templates/registration/signup.html -->
 {% extends "base.html" %}
-
 {% block title %}Sign Up{% endblock %}
-
 {% block content %}
-<h2>Student Sign Up</h2>
 
-{% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-  {% endfor %}
-{% endif %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h4 class="mb-0">Student Sign Up</h4></div>
+      <div class="card-body">
 
-{% if form.non_field_errors %}
-  {% for error in form.non_field_errors %}
-    <div class="alert alert-danger">{{ error }}</div>
-  {% endfor %}
-{% endif %}
+        {% if form.non_field_errors %}
+          {% for error in form.non_field_errors %}
+            <div class="alert alert-danger">{{ error }}</div>
+          {% endfor %}
+        {% endif %}
 
-<form method="post" id="signupForm">
-  {% csrf_token %}
+        <form method="post" id="signupForm">
+          {% csrf_token %}
 
-  <!-- Standard form fields -->
-  {{ form.as_p }}
+          {{ form.as_p }}
 
-  <!-- Face Capture Section -->
-  <div class="face-capture">
-    <p><strong>Face Photo</strong> — required for attendance</p>
+          <hr>
+          <p><strong>Face Photo</strong> — required for attendance</p>
 
-    <!-- Webcam preview -->
-    <video id="video" width="320" height="240" autoplay playsinline muted style="display:none; border: 2px solid #ccc;"></video>
-    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+          <video id="video" width="320" height="240" autoplay playsinline muted class="rounded mb-2" style="display:none;"></video>
+          <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
 
-    <!-- Captured photo preview -->
-    <div id="preview" style="display:none;">
-      <img id="capturedPhoto" width="320" height="240" style="border: 2px solid green;" />
-      <p style="color: green;">✓ Face captured successfully</p>
+          <div id="preview" style="display:none;" class="mb-2">
+            <img id="capturedPhoto" width="320" height="240" class="rounded border border-success">
+            <p class="text-success mt-1">✓ Face captured successfully</p>
+          </div>
+
+          <div class="mb-3">
+            <button type="button" id="startBtn" onclick="startCamera()" class="btn btn-outline-primary btn-sm">Open Camera</button>
+            <button type="button" id="captureBtn" onclick="capturePhoto()" class="btn btn-primary btn-sm" style="display:none;">Capture Photo</button>
+            <button type="button" id="retakeBtn" onclick="retakePhoto()" class="btn btn-outline-secondary btn-sm" style="display:none;">Retake</button>
+          </div>
+
+          <p id="cameraError" class="text-danger" style="display:none;"></p>
+
+          <input type="hidden" name="face_base64_data" id="face_base64_data">
+
+          <button type="submit" id="submitBtn" disabled class="btn btn-success w-100">Sign Up</button>
+          <div class="text-center mt-2">
+            <a href="{% url 'login' %}" class="btn btn-link btn-sm">Already have an account? Log in</a>
+          </div>
+        </form>
+
+      </div>
     </div>
-
-    <!-- Buttons -->
-    <div>
-      <button type="button" id="startBtn" onclick="startCamera()">Open Camera</button>
-      <button type="button" id="captureBtn" onclick="capturePhoto()" style="display:none;">Capture Photo</button>
-      <button type="button" id="retakeBtn" onclick="retakePhoto()" style="display:none;">Retake</button>
-    </div>
-
-    <p id="cameraError" style="color:red; display:none;"></p>
   </div>
-
-  <!-- Hidden field — stores the base64 image to send with the form -->
-  <input type="hidden" name="face_base64_data" id="face_base64_data" />
-
-  <button type="submit" id="submitBtn" disabled>Sign Up</button>
-  <p><a href="{% url 'home' %}">Cancel</a></p>
-</form>
+</div>
 
 <script>
   let stream = null;
@@ -76,31 +73,24 @@
   }
 
   function capturePhoto() {
-    // Draw current video frame to canvas
     ctx.drawImage(video, 0, 0, 320, 240);
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
 
-    // Show preview
     document.getElementById('capturedPhoto').src = imageData;
     document.getElementById('preview').style.display = 'block';
     video.style.display = 'none';
 
-    // Store in hidden field
     document.getElementById('face_base64_data').value = imageData;
 
-    // Update buttons
     document.getElementById('captureBtn').style.display = 'none';
     document.getElementById('retakeBtn').style.display = 'inline';
 
-    // Enable submit
     document.getElementById('submitBtn').disabled = false;
 
-    // Stop camera stream
     if (stream) stream.getTracks().forEach(t => t.stop());
   }
 
   function retakePhoto() {
-    // Reset everything
     document.getElementById('preview').style.display = 'none';
     document.getElementById('face_base64_data').value = '';
     document.getElementById('submitBtn').disabled = true;
@@ -108,4 +98,5 @@
     document.getElementById('startBtn').style.display = 'inline';
   }
 </script>
+
 {% endblock %}
