@@ -1,6 +1,6 @@
 # accounts/urls.py
 from django.urls import path
-from .views import SignUpView, CustomPasswordChangeView, HomeView, StartSessionView, AttendanceView, EndSessionView, recognize_face, ManageCourseStudentsView, StudentProfileView, SessionReportView
+from .views import SignUpView, CustomPasswordChangeView, HomeView, StartSessionView, AttendanceView, EndSessionView, recognize_face, ManageCourseStudentsView, StudentProfileView, SessionReportView, SessionExportView, CourseExportView
 
 
 
@@ -14,5 +14,7 @@ urlpatterns = [
     path("course/<int:course_id>/students/", ManageCourseStudentsView.as_view(), name="manage_course_students"),
     path("profile/", StudentProfileView.as_view(), name="student_profile"),
     path("session/<int:session_id>/report/", SessionReportView.as_view(), name="session_report"),
+    path("session/<int:session_id>/export/", SessionExportView.as_view(), name="session_export"),
+    path("course/<int:course_id>/export/", CourseExportView.as_view(), name="course_export"),
 ]
 

@@ -17,8 +17,9 @@ from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 logger = logging.getLogger(__name__)
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import json
+import csv
 
 
 
@@ -181,6 +182,73 @@ class SessionReportView(View):
             'attended': attended_students,
             'absent': absent_students,
         })
+
+
+@method_decorator(login_required, name='dispatch')
+class SessionExportView(View):
+    def get(self, request, session_id):
+        try:
+            session = ClassSession.objects.get(id=session_id, course__teacher=request.user.teacher_profile)
+        except (ClassSession.DoesNotExist, Teacher.DoesNotExist):
+            messages.error(request, 'Session not found or access denied.')
+            return redirect('home')
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="session_{session_id}_{session.course.code}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Student ID', 'Name', 'Status'])
+
+        attended_ids = set(
+            Attendance.objects.filter(session=session).values_list('student_id', flat=True)
+        )
+        for student in session.course.students.all().order_by('student_id'):
+            status = 'Present' if student.pk in attended_ids else 'Absent'
+            writer.writerow([student.student_id, student.user.get_full_name(), status])
+
+        return response
+
+
+@method_decorator(login_required, name='dispatch')
+class CourseExportView(View):
+    def get(self, request, course_id):
+        try:
+            course = Course.objects.get(id=course_id, teacher=request.user.teacher_profile)
+        except (Course.DoesNotExist, Teacher.DoesNotExist):
+            messages.error(request, 'Course not found or access denied.')
+            return redirect('home')
+
+        sessions = list(course.sessions.order_by('started_at'))
+        students = list(course.students.all().order_by('student_id'))
+
+        # Build a set of (student_id, session_id) pairs that have attendance
+        attended_pairs = set(
+            Attendance.objects.filter(session__course=course)
+            .values_list('student_id', 'session_id')
+        )
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="course_{course.code}_attendance.csv"'
+
+        writer = csv.writer(response)
+
+        # Header row: Student ID, Name, then one column per session, then Total and %
+        session_headers = [s.started_at.strftime('%b %d %Y %H:%M') for s in sessions]
+        writer.writerow(['Student ID', 'Name'] + session_headers + ['Total Present', 'Attendance %'])
+
+        for student in students:
+            row = [student.student_id, student.user.get_full_name()]
+            total = 0
+            for session in sessions:
+                present = (student.pk, session.pk) in attended_pairs
+                row.append('Present' if present else 'Absent')
+                if present:
+                    total += 1
+            percentage = round((total / len(sessions)) * 100) if sessions else 0
+            row += [total, f'{percentage}%']
+            writer.writerow(row)
+
+        return response
 
 
 @method_decorator(login_required, name='dispatch')

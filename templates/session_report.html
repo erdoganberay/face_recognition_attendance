@@ -4,7 +4,15 @@
 
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h2>{{ session.course.code }} — {{ session.course.name }}</h2>
-  <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">Back to Home</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'session_export' session.id %}" class="btn btn-success btn-sm">
+      <i class="bi bi-download me-1"></i>Export Session
+    </a>
+    <a href="{% url 'course_export' session.course.id %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Full Course
+    </a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">Back to Home</a>
+  </div>
 </div>
 
 <p class="text-muted mb-4">
