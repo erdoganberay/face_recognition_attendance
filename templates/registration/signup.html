@@ -1,12 +1,13 @@
-<!-- templates/registration/signup.html -->
 {% extends "base.html" %}
-{% block title %}Sign Up{% endblock %}
-{% block content %}
+{% block title %}Student Sign Up{% endblock %}
 
+{% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header"><h4 class="mb-0">Student Sign Up</h4></div>
+  <div class="col-md-7">
+    <div class="card shadow">
+      <div class="card-header bg-success text-white">
+        <h4 class="mb-0">Student Sign Up</h4>
+      </div>
       <div class="card-body">
 
         {% if form.non_field_errors %}
@@ -17,86 +18,195 @@
 
         <form method="post" id="signupForm">
           {% csrf_token %}
-
           {{ form.as_p }}
 
           <hr>
-          <p><strong>Face Photo</strong> — required for attendance</p>
+          <h5 class="mb-3">Face Photo <span class="text-danger">*</span> — Required for attendance</h5>
 
-          <video id="video" width="320" height="240" autoplay playsinline muted class="rounded mb-2" style="display:none;"></video>
-          <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+          <div class="position-relative text-center mb-3" style="max-width: 100%;">
+            <video id="video" 
+                   width="480" 
+                   height="360" 
+                   autoplay 
+                   playsinline 
+                   muted 
+                   class="rounded shadow-sm bg-dark"
+                   style="display: none; max-width: 100%;">
+            </video>
 
-          <div id="preview" style="display:none;" class="mb-2">
-            <img id="capturedPhoto" width="320" height="240" class="rounded border border-success">
-            <p class="text-success mt-1">✓ Face captured successfully</p>
+            <canvas id="overlay" 
+                    width="480" 
+                    height="360"
+                    class="position-absolute top-0 start-0 rounded"
+                    style="display: none; pointer-events: none;">
+            </canvas>
           </div>
 
-          <div class="mb-3">
-            <button type="button" id="startBtn" onclick="startCamera()" class="btn btn-outline-primary btn-sm">Open Camera</button>
-            <button type="button" id="captureBtn" onclick="capturePhoto()" class="btn btn-primary btn-sm" style="display:none;">Capture Photo</button>
-            <button type="button" id="retakeBtn" onclick="retakePhoto()" class="btn btn-outline-secondary btn-sm" style="display:none;">Retake</button>
+          <div id="face-status" class="alert alert-secondary text-center mb-3" style="display: none;">
+            Position your face clearly in the frame
           </div>
 
-          <p id="cameraError" class="text-danger" style="display:none;"></p>
+          <div id="preview" style="display: none;" class="text-center mb-3">
+            <img id="capturedPhoto" 
+                 class="rounded border border-success shadow-sm" 
+                 style="max-width: 100%; height: auto;">
+            <p class="text-success mt-2 fw-bold">✓ Face captured successfully</p>
+          </div>
+
+          <div class="d-flex justify-content-center gap-2 mb-4">
+            <button type="button" id="startBtn" onclick="startCamera()" 
+                    class="btn btn-outline-primary">
+              <i class="bi bi-camera-video"></i> Open Camera
+            </button>
+            
+            <button type="button" id="captureBtn" onclick="capturePhoto()" 
+                    class="btn btn-primary" style="display: none;">
+              Capture Photo
+            </button>
+            
+            <button type="button" id="retakeBtn" onclick="retakePhoto()" 
+                    class="btn btn-outline-secondary" style="display: none;">
+              Retake Photo
+            </button>
+          </div>
+
+          <p id="cameraError" class="text-danger text-center" style="display: none;"></p>
 
           <input type="hidden" name="face_base64_data" id="face_base64_data">
 
-          <button type="submit" id="submitBtn" disabled class="btn btn-success w-100">Sign Up</button>
-          <div class="text-center mt-2">
-            <a href="{% url 'login' %}" class="btn btn-link btn-sm">Already have an account? Log in</a>
+          <button type="submit" id="submitBtn" disabled class="btn btn-success w-100 py-2">
+            Create Account
+          </button>
+
+          <div class="text-center mt-3">
+            <a href="{% url 'login' %}" class="text-muted">Already have an account? Log in</a>
           </div>
         </form>
-
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
 <script>
-  let stream = null;
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+let stream = null;
+let isModelLoaded = false;
 
-  async function startCamera() {
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const ctx = overlay.getContext('2d');
+const faceStatus = document.getElementById('face-status');
+const cameraError = document.getElementById('cameraError');
+
+async function loadFaceModels() {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
-      video.style.display = 'block';
-      document.getElementById('startBtn').style.display = 'none';
-      document.getElementById('captureBtn').style.display = 'inline';
-      document.getElementById('cameraError').style.display = 'none';
-    } catch (e) {
-      document.getElementById('cameraError').textContent = 'Could not access camera: ' + e.message;
-      document.getElementById('cameraError').style.display = 'block';
-    }
-  }
+        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights');
+        isModelLoaded = true;
+    } catch (err) {}
+}
 
-  function capturePhoto() {
-    ctx.drawImage(video, 0, 0, 320, 240);
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'user',
+                width: { ideal: 480 },
+                height: { ideal: 360 },
+                frameRate: { ideal: 30 }
+            }
+        });
+
+        video.srcObject = stream;
+        video.style.display = 'block';
+        overlay.style.display = 'block';
+        faceStatus.style.display = 'block';
+
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('captureBtn').style.display = 'inline-block';
+        cameraError.style.display = 'none';
+
+        if (isModelLoaded) {
+            startLiveFaceDetection();
+        }
+
+    } catch (e) {
+        cameraError.textContent = 'Could not access camera: ' + e.message;
+        cameraError.style.display = 'block';
+    }
+}
+
+function startLiveFaceDetection() {
+    setInterval(async () => {
+        if (!video || video.style.display === 'none') return;
+
+        const detections = await faceapi.detectAllFaces(video, 
+            new faceapi.TinyFaceDetectorOptions({ 
+                inputSize: 512, 
+                scoreThreshold: 0.5 
+            })
+        );
+
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        if (detections.length === 1) {
+            const box = detections[0].detection.box;
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+            faceStatus.className = 'alert alert-success text-center mb-3';
+            faceStatus.textContent = '✓ Good! Face detected clearly';
+
+        } else if (detections.length > 1) {
+            faceStatus.className = 'alert alert-warning text-center mb-3';
+            faceStatus.textContent = 'Multiple faces detected. Only show your face.';
+        } else {
+            faceStatus.className = 'alert alert-secondary text-center mb-3';
+            faceStatus.textContent = 'Position your face clearly in the frame';
+        }
+    }, 200);
+}
+
+function capturePhoto() {
+    if (!video) return;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth || 480;
+    tempCanvas.height = video.videoHeight || 360;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(video, 0, 0);
+
+    const imageData = tempCanvas.toDataURL('image/jpeg', 0.85);
 
     document.getElementById('capturedPhoto').src = imageData;
     document.getElementById('preview').style.display = 'block';
+
     video.style.display = 'none';
+    overlay.style.display = 'none';
 
     document.getElementById('face_base64_data').value = imageData;
 
     document.getElementById('captureBtn').style.display = 'none';
-    document.getElementById('retakeBtn').style.display = 'inline';
-
+    document.getElementById('retakeBtn').style.display = 'inline-block';
     document.getElementById('submitBtn').disabled = false;
 
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  }
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+    }
+}
 
-  function retakePhoto() {
+function retakePhoto() {
     document.getElementById('preview').style.display = 'none';
     document.getElementById('face_base64_data').value = '';
     document.getElementById('submitBtn').disabled = true;
     document.getElementById('retakeBtn').style.display = 'none';
-    document.getElementById('startBtn').style.display = 'inline';
-  }
+    document.getElementById('startBtn').style.display = 'inline-block';
+}
+
+window.onload = async function() {
+    await loadFaceModels();
+};
 </script>
 
 {% endblock %}
