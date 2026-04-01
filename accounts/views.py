@@ -1,4 +1,3 @@
-# accounts/views.py
 from django.contrib.auth import logout
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib import messages
@@ -34,7 +33,7 @@ class SignUpView(View):
         form = SignUpForm(request.POST)
 
         if form.is_valid():
-            # Get face encoding from hidden field
+            # get face encoding from hidden field
             face_base64_data = request.POST.get('face_base64_data', '')
 
             if not face_base64_data:
@@ -42,16 +41,16 @@ class SignUpView(View):
                 return render(request, self.template_name, {'form': form})
             
             try:
-                #Convert Base64 image to binary
+                # convert Base64 image to binary
                 image_data = face_base64_data.split(',')[1]
                 img_bytes = base64.b64decode(image_data)
                 img_file = io.BytesIO(img_bytes)
 
-                # Encode the image
+                # encode the image
                 user_image = face_recognition.load_image_file(img_file) 
                 encodings = face_recognition.face_encodings(user_image)
                 
-                #Check the face count in the image >1 is not allowed.
+                # check the face count in the image >1 is not allowed.
                 if len(encodings) == 0:
                     form.add_error(None, 'No face detected in the photo. Please try again.')
                     return render(request, self.template_name, {'form': form})
@@ -64,23 +63,23 @@ class SignUpView(View):
                 return render(request, self.template_name, {'form': form})    
         
 
-           # Save the User
+           # save the user
             user = form.save(commit=False)
             user.first_name = form.cleaned_data['first_name']
             user.last_name = form.cleaned_data['last_name']
             user.email = form.cleaned_data['email']
             user.save()
 
-            # Save the Student Fields
+            # save the student fields
             student = Student(
                 user=user,
                 student_id=form.cleaned_data['student_id'],
                 date_of_birth=form.cleaned_data['date_of_birth'],   
             )
-            #Serializing Encoding data
+            # serializing encoding data
             student.set_encoding(encodings[0])
             student.save()
-            #Account Creation Succesfull
+            #account creation succesfull
             messages.success(request, 'Account created successfully! Please log in.')
             return redirect('login')
 
