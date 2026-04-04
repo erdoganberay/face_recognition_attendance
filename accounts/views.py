@@ -4,14 +4,14 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views import View
-from .forms import SignUpForm
+from .forms import SignUpForm, CreateTeacherForm, CreateCourseForm
 from .models import Student, Teacher, Course, ClassSession,Attendance
 import face_recognition
 import numpy as np
 import base64
 import logging
 import io
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -132,6 +132,15 @@ class HomeView(View):
                     'percentage': percentage,
                 })
             return render(request, self.template_name, {'role': 'student', 'courses': page_obj, 'course_data': course_data, 'page_obj': page_obj})
+        elif request.user.is_superuser:
+            stats = {
+                'teacher_count': Teacher.objects.count(),
+                'student_count': Student.objects.count(),
+                'course_count': Course.objects.count(),
+                'session_count': ClassSession.objects.count(),
+            }
+            recent_sessions = ClassSession.objects.select_related('course').order_by('-started_at')[:5]
+            return render(request, self.template_name, {'role': 'superuser', 'stats': stats, 'recent_sessions': recent_sessions})
         else:
             return render(request, self.template_name, {})
 
@@ -300,7 +309,12 @@ class ManageCourseStudentsView(View):
     template_name = 'course_students.html'
 
     def get_course_for_teacher(self, request, course_id):
-        """Return the course only if the logged-in user is its teacher."""
+        """Return the course if the logged-in user is its teacher or a superuser."""
+        if request.user.is_superuser:
+            try:
+                return Course.objects.get(id=course_id)
+            except Course.DoesNotExist:
+                return None
         try:
             return Course.objects.get(id=course_id, teacher=request.user.teacher_profile)
         except (Course.DoesNotExist, Teacher.DoesNotExist):
@@ -344,6 +358,60 @@ class ManageCourseStudentsView(View):
                 messages.error(request, f'No student found with ID "{student_id}".')
 
         return redirect('manage_course_students', course_id=course.id)
+
+
+superuser_required = user_passes_test(lambda u: u.is_superuser, login_url='login')
+
+
+@method_decorator(superuser_required, name='dispatch')
+class AdminPanelView(View):
+    template_name = 'admin_panel.html'
+
+    def get(self, request):
+        teachers = Teacher.objects.select_related('user').all().order_by('staff_id')
+        courses = Course.objects.select_related('teacher__user').all().order_by('code')
+        return render(request, self.template_name, {'teachers': teachers, 'courses': courses})
+
+
+@method_decorator(superuser_required, name='dispatch')
+class CreateTeacherView(View):
+    template_name = 'create_teacher.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {'form': CreateTeacherForm()})
+
+    def post(self, request):
+        form = CreateTeacherForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.email = form.cleaned_data['email']
+            user.save()
+            Teacher.objects.create(
+                user=user,
+                staff_id=form.cleaned_data['staff_id'],
+                department=form.cleaned_data['department'],
+            )
+            messages.success(request, f'Teacher {user.get_full_name()} created successfully.')
+            return redirect('admin_panel')
+        return render(request, self.template_name, {'form': form})
+
+
+@method_decorator(superuser_required, name='dispatch')
+class CreateCourseView(View):
+    template_name = 'create_course.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {'form': CreateCourseForm()})
+
+    def post(self, request):
+        form = CreateCourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Course {form.cleaned_data["code"]} created successfully.')
+            return redirect('admin_panel')
+        return render(request, self.template_name, {'form': form})
 
 
 @csrf_exempt

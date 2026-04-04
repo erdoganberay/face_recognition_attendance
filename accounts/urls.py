@@ -1,6 +1,6 @@
 # accounts/urls.py
 from django.urls import path
-from .views import SignUpView, CustomPasswordChangeView, HomeView, StartSessionView, AttendanceView, EndSessionView, recognize_face, ManageCourseStudentsView, StudentProfileView, SessionReportView, SessionExportView, CourseExportView, ManualAttendanceView
+from .views import SignUpView, CustomPasswordChangeView, HomeView, StartSessionView, AttendanceView, EndSessionView, recognize_face, ManageCourseStudentsView, StudentProfileView, SessionReportView, SessionExportView, CourseExportView, ManualAttendanceView, AdminPanelView, CreateTeacherView, CreateCourseView
 
 
 
@@ -17,5 +17,8 @@ urlpatterns = [
     path("session/<int:session_id>/export/", SessionExportView.as_view(), name="session_export"),
     path("course/<int:course_id>/export/", CourseExportView.as_view(), name="course_export"),
     path("session/<int:session_id>/manual/", ManualAttendanceView.as_view(), name="manual_attendance"),
+    path("admin-panel/", AdminPanelView.as_view(), name="admin_panel"),
+    path("admin-panel/create-teacher/", CreateTeacherView.as_view(), name="create_teacher"),
+    path("admin-panel/create-course/", CreateCourseView.as_view(), name="create_course"),
 ]
 
