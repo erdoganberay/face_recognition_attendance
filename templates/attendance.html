@@ -17,6 +17,9 @@
           {% csrf_token %}
           <button type="submit" class="btn btn-danger">End Session</button>
         </form>
+        <a href="{% url 'session_report' session.id %}" class="btn btn-outline-secondary btn-sm mt-2">
+          Manual Attendance
+        </a>
       </div>
     </div>
   </div>

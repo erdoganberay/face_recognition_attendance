@@ -184,6 +184,34 @@ class SessionReportView(View):
 
 
 @method_decorator(login_required, name='dispatch')
+class ManualAttendanceView(View):
+    def post(self, request, session_id):
+        try:
+            session = ClassSession.objects.get(id=session_id, course__teacher=request.user.teacher_profile)
+        except (ClassSession.DoesNotExist, Teacher.DoesNotExist):
+            messages.error(request, 'Session not found or access denied.')
+            return redirect('home')
+
+        action = request.POST.get('action')
+        student_pk = request.POST.get('student_pk')
+
+        try:
+            student = Student.objects.get(pk=student_pk)
+        except Student.DoesNotExist:
+            messages.error(request, 'Student not found.')
+            return redirect('session_report', session_id=session_id)
+
+        if action == 'mark':
+            Attendance.objects.get_or_create(session=session, student=student)
+            messages.success(request, f'{student.user.get_full_name()} marked as present.')
+        elif action == 'unmark':
+            Attendance.objects.filter(session=session, student=student).delete()
+            messages.success(request, f'{student.user.get_full_name()} removed from attendance.')
+
+        return redirect('session_report', session_id=session_id)
+
+
+@method_decorator(login_required, name='dispatch')
 class SessionExportView(View):
     def get(self, request, session_id):
         try:
