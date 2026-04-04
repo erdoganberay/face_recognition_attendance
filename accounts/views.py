@@ -14,6 +14,7 @@ import io
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
 logger = logging.getLogger(__name__)
 from django.http import JsonResponse, HttpResponse
@@ -101,13 +102,17 @@ class HomeView(View):
 
     def get(self, request):
         if hasattr(request.user, 'teacher_profile'):
-            courses = request.user.teacher_profile.courses.prefetch_related('sessions').all()
-            return render(request, self.template_name, {'role': 'teacher', 'courses': courses})
+            courses_qs = request.user.teacher_profile.courses.prefetch_related('sessions').all()
+            paginator = Paginator(courses_qs, 6)
+            page_obj = paginator.get_page(request.GET.get('page'))
+            return render(request, self.template_name, {'role': 'teacher', 'courses': page_obj, 'page_obj': page_obj})
         elif hasattr(request.user, 'student_profile'):
             student = request.user.student_profile
-            courses = student.courses.all()
+            courses_qs = student.courses.all()
+            paginator = Paginator(courses_qs, 6)
+            page_obj = paginator.get_page(request.GET.get('page'))
             course_data = []
-            for course in courses:
+            for course in page_obj:
                 sessions = course.sessions.all().order_by('-started_at')
                 session_data = []
                 for session in sessions:
@@ -126,7 +131,7 @@ class HomeView(View):
                     'attended_count': attended_count,
                     'percentage': percentage,
                 })
-            return render(request, self.template_name, {'role': 'student', 'courses': courses, 'course_data': course_data})
+            return render(request, self.template_name, {'role': 'student', 'courses': page_obj, 'course_data': course_data, 'page_obj': page_obj})
         else:
             return render(request, self.template_name, {})
 
