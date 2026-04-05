@@ -102,13 +102,13 @@ class HomeView(View):
 
     def get(self, request):
         if hasattr(request.user, 'teacher_profile'):
-            courses_qs = request.user.teacher_profile.courses.prefetch_related('sessions').all()
+            courses_qs = request.user.teacher_profile.courses.prefetch_related('sessions').order_by('code')
             paginator = Paginator(courses_qs, 6)
             page_obj = paginator.get_page(request.GET.get('page'))
             return render(request, self.template_name, {'role': 'teacher', 'courses': page_obj, 'page_obj': page_obj})
         elif hasattr(request.user, 'student_profile'):
             student = request.user.student_profile
-            courses_qs = student.courses.all()
+            courses_qs = student.courses.order_by('code')
             paginator = Paginator(courses_qs, 6)
             page_obj = paginator.get_page(request.GET.get('page'))
             course_data = []

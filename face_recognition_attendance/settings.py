@@ -26,6 +26,9 @@ SECRET_KEY = 'django-insecure-&xvi7q^@c8s38#elrf&rennp7iicp&&@=j17r!3jiy(=_i-cc_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+if DEBUG:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
