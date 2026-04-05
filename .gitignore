@@ -16,3 +16,6 @@ media/
 # OS
 .DS_Store
 Thumbs.db
+
+# Load testing — contains personal face photo in base64
+face_b64.txt
