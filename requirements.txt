@@ -9,4 +9,4 @@ psycopg2-binary
 # static files
 whitenoise
 # email
-resend
+django-anymail[resend]
