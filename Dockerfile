@@ -56,4 +56,4 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
-CMD ["sh", "-c", "python manage.py migrate && python manage.py createsuperuser --noinput --username=$DJANGO_SUPERUSER_USERNAME --email=$DJANGO_SUPERUSER_EMAIL --password=$DJANGO_SUPERUSER_PASSWORD || true && python manage.py collectstatic --noinput && gunicorn face_recognition_attendance.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
+CMD ["sh", "-c", "python manage.py migrate && python manage.py createsuperuser --no-input || true && python manage.py collectstatic --noinput && gunicorn face_recognition_attendance.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
