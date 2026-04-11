@@ -1,4 +1,10 @@
 Django==5.2.12
 numpy==1.26.4
 gunicorn
-locust
+# env var / settings
+python-decouple
+dj-database-url
+# database
+psycopg2-binary
+# static files
+whitenoise

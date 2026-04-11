@@ -3,10 +3,11 @@ services:
     build: .
     ports:
       - "8000:8000"
-      - "8089:8089"
+    env_file:
+      - .env
     volumes:
       - .:/app
     command: >
-      sh -c "python manage.py makemigrations &&
-             python manage.py migrate &&
-             gunicorn face_recognition_attendance.wsgi:application --bind 0.0.0.0:8000 --workers 9"
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn face_recognition_attendance.wsgi:application --bind 0.0.0.0:8000 --workers 3"
